@@ -30,7 +30,7 @@
                 <padding>
                     <Insets left="10.0" right="10.0"/>
                 </padding>
-                <HBox>
+                <HBox spacing="10.0">
                     <Label fx:id="songName" text="name" wrapText="true">
                         <font>
                             <Font name="System Bold" size="12.0"/>
@@ -39,6 +39,11 @@
                             <Bloom/>
                         </effect>
                     </Label>
+                    <JFXButton fx:id="showSongText" text="Показать текст песни" prefWidth="150.0" style="-fx-background-color: #E6E6E6;" visible="false">
+                        <font>
+                            <Font name="System Bold" size="12.0"/>
+                        </font>
+                    </JFXButton>
                     <Pane HBox.hgrow="ALWAYS"/>
                     <Label fx:id="time" text="mm:ss" wrapText="true" HBox.hgrow="NEVER"/>
                 </HBox>

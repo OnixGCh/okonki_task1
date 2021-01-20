@@ -1,8 +1,12 @@
 package okonki_task1;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.stream.JsonReader;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXSlider;
 import com.jfoenix.controls.JFXToggleNode;
+import global_task.JsonBlueprints;
 import javafx.application.Application;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -19,14 +23,28 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.VBox;
 import javafx.scene.media.MediaPlayer;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.Duration;
-
+import org.apache.http.NameValuePair;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
 import java.io.File;
+import java.io.IOException;
+import java.io.StringReader;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Stack;
+
+import org.json.JSONObject;
+import org.json.XML;
 
 public class MPlayer extends Application {
     @FXML
@@ -40,6 +58,9 @@ public class MPlayer extends Application {
 
     @FXML
     private JFXButton prev;
+
+    @FXML
+    private JFXButton showSongText;
 
     @FXML
     private Label time;
@@ -77,6 +98,9 @@ public class MPlayer extends Application {
     private MediaPlayer mediaPlayer = null;
     private int index = -1;
     private int size = 1;
+    private Gson gson = new Gson();
+    private ResultsArray resultsArray = new ResultsArray();
+    private FinalResult finalResult = new FinalResult();
 
     @FXML
     void initialize() {
@@ -92,20 +116,74 @@ public class MPlayer extends Application {
         this.setImageOnButton(next, "next.png", 20);
         this.setImageOnButton(play, "play.png", 35);
 
-        /*playlist.setOnKeyPressed(keyEvent -> {
+        showSongText.setOnAction(keyEvent -> {
             Song selectedItem = playlist.getSelectionModel().getSelectedItem();
 
             if (selectedItem == null) {
                 return;
             }
 
-            if (keyEvent.getCode().equals(KeyCode.DELETE)) {
-                playlist.getItems().remove(selectedItem);
-                rewindClick(1);
+            String songRefactor = playlist.getSelectionModel().getSelectedItem().getName().substring(0, playlist.getSelectionModel().getSelectedItem().getName().length()-4);
+            String firstPart = "";
+            String secondPart = "";
+            String result = "";
+
+            for(Integer i = 0; i < songRefactor.length(); i++)
+                if(songRefactor.charAt(i) == '-') {
+                    firstPart = songRefactor.substring(0, i);
+                    secondPart = songRefactor.substring(i + 1);
+                }
+
+            for(Integer i = 0; i < firstPart.length(); i++)
+                if(firstPart.charAt(i) == ' ') {
+                    firstPart = firstPart.substring(0, i) + "%20" + firstPart.substring(i + 1);
+                }
+
+            for(Integer i = 0; i < secondPart.length(); i++)
+                if(secondPart.charAt(i) == ' ') {
+                    secondPart = secondPart.substring(0, i) + "%20" + secondPart.substring(i + 1);
+                }
+
+            firstPart = firstPart.substring(0, firstPart.length()-3);
+            secondPart = secondPart.substring(3);
+            System.out.println(firstPart);
+            System.out.println(secondPart);
+
+            try {
+
+                result = makeAPICall("http://api.chartlyrics.com/apiv1.asmx/SearchLyric?artist=" + firstPart + "&song=" + secondPart);
+                JSONObject obj = XML.toJSONObject(result);
+                JsonReader jsonReader = new JsonReader(new StringReader(obj.toString()));
+                resultsArray = gson.fromJson(jsonReader, ResultsArray.class);
+
+                firstPart = resultsArray.ArrayOfSearchLyricResult.SearchLyricResult[0].LyricChecksum;
+                secondPart = resultsArray.ArrayOfSearchLyricResult.SearchLyricResult[0].LyricId;
+
+                try {
+                    //result = makeAPICall("https://api.genius.com/web_pages/lookup?access_token=DEfoBnanPcbpKZEd7Iix_7vQqFi_k7yeUK-IfFdUrrYV48CwqgVl4vvX-SJYLrmF&canonical_url=http://genius.com/" + songRefactor);
+                    result = makeAPICall("http://api.chartlyrics.com/apiv1.asmx/GetLyric?lyricId="+ secondPart + "&lyricCheckSum=" + firstPart);
+                } catch (IOException | URISyntaxException e) {
+                    e.printStackTrace();
+                }
+
+                obj = XML.toJSONObject(result);
+                jsonReader = new JsonReader(new StringReader(obj.toString()));
+                finalResult = gson.fromJson(jsonReader, FinalResult.class);
+
+                Stage newStage = new Stage();
+                VBox vBox = new VBox();
+                Label lbl = new Label(finalResult.GetLyricResult.Lyric);
+                vBox.getChildren().add(lbl);
+                newStage.setScene(new Scene(vBox));
+                newStage.show();
+
+            } catch (IOException | URISyntaxException e) {
+                e.printStackTrace();
             }
-        });*/
+        });
 
         mediaDelete.setOnAction(actionEvent -> {
+            showSongText.setVisible(false);
             playlist.getItems().clear();
             mediaPlayer.stop();
             mediaPlayer = null;
@@ -146,6 +224,27 @@ public class MPlayer extends Application {
         }
     }
 
+    static String makeAPICall(String url) throws IOException, URISyntaxException {
+        var response_content = "";
+
+        var query = new URIBuilder(url);
+
+        var client = HttpClients.createDefault();
+        var request = new HttpGet(query.build());
+
+        var response = client.execute(request);
+
+        try {
+            System.out.println(response.getStatusLine());
+            var entity = response.getEntity();
+            response_content = EntityUtils.toString(entity);
+            EntityUtils.consume(entity);
+        } finally {
+
+        }
+        return response_content;
+    }
+
     ChangeListener<Duration> currentTimeListener = new ChangeListener<>() {
         @Override
         public void changed(ObservableValue<? extends Duration> observableValue, Duration duration, Duration t) {
@@ -164,6 +263,7 @@ public class MPlayer extends Application {
 
     ChangeListener<Song> tableChangeListener = (val, oldSong, newSong) -> {
         if (newSong != null) {
+            showSongText.setVisible(true);
             setCurrentSong(newSong);
             index = newSong.getIndex() - 1;
             songName.setText(newSong.getName());
