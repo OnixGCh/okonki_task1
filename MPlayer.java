@@ -160,7 +160,6 @@ public class MPlayer extends Application {
                 secondPart = resultsArray.ArrayOfSearchLyricResult.SearchLyricResult[0].LyricId;
 
                 try {
-                    //result = makeAPICall("https://api.genius.com/web_pages/lookup?access_token=DEfoBnanPcbpKZEd7Iix_7vQqFi_k7yeUK-IfFdUrrYV48CwqgVl4vvX-SJYLrmF&canonical_url=http://genius.com/" + songRefactor);
                     result = makeAPICall("http://api.chartlyrics.com/apiv1.asmx/GetLyric?lyricId="+ secondPart + "&lyricCheckSum=" + firstPart);
                 } catch (IOException | URISyntaxException e) {
                     e.printStackTrace();
